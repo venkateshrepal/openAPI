@@ -67,7 +67,4 @@ Common responses defined in the API include:
 To run and test the APIs locally:
 1. Clone the repository.
 2. Review the `openapi.yaml` file for API details.
-3. Use [Swagger UI](https://swagger.io/tools/swagger-ui/) to check the API endpoints as per specification.
-
-## Contributing
-Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.
+3. Copy API specification to [Swagger UI]([https://swagger.io/tools/swagger-ui/](https://editor.swagger.io/)) to check the API endpoints as per specification.
