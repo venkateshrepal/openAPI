@@ -1,0 +1,310 @@
+# Notes: 
+
+# List the initial mandatory properties as per OpenAPI Map (https://openapi-map.apihandyman.io)
+
+# - How to define security:
+#   1. `security` property
+#   2. `securitySchemes` in components
+#   3. `security` in each API. Note that values under `flows` in `securitySchemes` are predefined by the OpenAPI specification.
+
+# Note that one path can have multiple methods defining specific operations. For example, `/payment` can have `GET` and `POST` methods with their own uses.
+
+# Define tags to group APIs so that the UI presentation will have titles for each API group. For example, "Retrieve Payments."
+
+# Define methods, and write requests, responses in the form of objects/arrays as necessary. Add examples.
+
+# `operationId`: `operationId` will be used as names for methods/functions while generating code through code-generating tools.
+
+# Configure reusable parameters, responses, errors, etc., with "components". First, note how you would like to reuse schemas or request bodies for multiple APIs. Check the map to know what elements can be configured within components.
+
+# Consider inheritance (`allOf`) and polymorphism (`anyOf`, `oneOf`) keywords.
+
+# When output elements of an API can be used as input to another API, use "links":
+#   1. Define link in components. Then give reference in response for a particular API. If `$ref` is used for an API response, link values will be ignored. In such case:
+#     a) Give reference in `components.responses` itself, or
+#     b) With API response, remove `$ref` and add details. 
+
+
+
+openapi: 3.0.3
+info:
+  title: Sample OpenAPI Specification
+  description: >-
+    Sample openAPI Specification for **Payment Initiation** and **Retrieve
+    Payment Status** APIs
+  termsOfService: termsOfService.com
+  contact:
+    name: ': Organization Name'
+    url: organizationurl.com
+    email: testmail@testdomain.com
+  license:
+    name: License name
+    url: www.licenseurl.com
+  version: '1.1'
+servers:
+  - url: sandbox.organization.com
+    description: (sandbox environment)
+    variables:
+      username:
+        default: sandbox_user1
+        enum:
+          - sandbox_user1
+          - sandbox_user2
+          - sandbox_user3
+  - url: developer.organization.com
+    description: (development environment)
+    variables:
+      username:
+        default: dev_user1
+        enum:
+          - dev_user1
+          - dev_user2
+          - dev_user3
+tags:
+  - name: Retrieve Payments
+    description: APIs to retrieve payment details
+  - name: Initiate Payments
+    description: APIs to initiate new credit transfers
+externalDocs:
+  description: Any External Documentation
+  url: https://example.com
+security:
+  - BasicAuth: []
+  - BearerAuth: []
+  - ApiKeyAuth: []
+  - oAuth2AuthCode:
+      - read
+      - write
+      - admin
+  - clientCredential1:
+      - read
+      - write
+      - admin
+x-custom-info:
+  comment: Some comments
+  developers:
+    - name: developer1_name
+      email: developer1_name@domain.com
+    - name: developer2_name
+      email: developer2_name@domain.com
+paths:
+  /payment/status:
+    get:
+      operationId: getAllPaymentsStatus
+      tags:
+        - Retrieve Payments
+      deprecated: true
+      summary: Retrieve all payments
+      description: Returns the list of payments initiated with their status
+      security:
+        - oAuth2AuthCode:
+            - read
+            - write
+      responses:
+        '200':
+          description: Returns the list of payments initiated with their status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    paymentId:
+                      type: integer
+                    paymentStatus:
+                      type: string
+              examples:
+                Example 1:
+                  value:
+                    - paymentId: 101
+                      paymentStatus: ACSC
+                    - paymentId: 102
+                      paymentStatus: RJCT
+  /payment/status/{paymentId}:
+    get:
+      operationId: getSinglePaymentStatus
+      tags:
+        - Retrieve Payments
+      summary: Retrieve single payment
+      description: Returns a payment with its status
+      security:
+        - oAuth2AuthCode:
+            - read
+            - write
+      parameters:
+        - $ref: '#/components/parameters/paymentIdQueryParameter'
+      responses:
+        '200':
+          description: Returns the list of payments initiated with their status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paymentId:
+                    type: number
+                  paymentStatus:
+                    type: string
+              examples:
+                example 1:
+                  value:
+                    - paymentId: 101
+                      paymentStatus: ACSC
+                example 2:
+                  value:
+                    - paymentId: 102
+                      paymentStatus: PNDG
+  /payment/initiate:
+    post:
+      operationId: createPayment
+      tags:
+        - Initiate Payments
+      summary: Initiate credit transfer
+      description: Initiate a new Customer Credit Transfer Payment
+      security:
+        - clientCredential1:
+            - read
+            - write
+      requestBody:
+        $ref: '#/components/requestBodies/paymentOperationBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/successfulResponse'
+        '400':
+          $ref: '#/components/responses/validationsFailureError'
+components:
+  parameters:
+    paymentIdQueryParameter:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 9999
+      example: 100
+  requestBodies:
+    paymentOperationBody:
+      description: Request body for POST/PUT along with paymentDetailsSchema
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/paymentDetailsSchema'
+  schemas:
+    paymentDetailsSchema:
+      type: object
+      properties:
+        paymentId:
+          type: number
+        amount:
+          type: number
+          format: float
+        currency:
+          type: string
+        creationDate:
+          type: string
+          format: date-time
+        accountDetails:
+          oneOf:
+            - $ref: '#/components/schemas/bankTransferDetailsSchema'
+            - $ref: '#/components/schemas/walletTransferDetailsSchema'
+        isWalletPayment:
+          type: boolean
+          nullable: false
+      required:
+        - paymentId
+        - amount
+        - currency
+        - creationDate
+        - paymentMethod
+    bankTransferDetailsSchema:
+      type: object
+      properties:
+        creditorAccount:
+          type: number
+        debtorAccount:
+          type: number
+      required:
+        - creditorAccount
+        - debtorAccount
+    walletTransferDetailsSchema:
+      type: object
+      properties:
+        walletId:
+          type: string
+        walletProvider:
+          type: string
+      required:
+        - walletId
+        - walletProvider
+  responses:
+    successfulResponse:
+      description: Returns the list of payments initiated with their status
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              paymentId:
+                type: integer
+              paymentStatus:
+                type: string
+      links:
+        LinkName_GetSinglePaymentStatus:
+          $ref: '#/components/links/LinkName_GetSinglePaymentStatus'
+    validationsFailureError:
+      description: Payment failed validations
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errorCode:
+                type: integer
+              description:
+                type: string
+          examples:
+            example:
+              value:
+                - errorCode: 400
+                  description: Payment failed validations
+  links:
+    LinkName_GetSinglePaymentStatus:
+      description: >
+        The `paymentId` value returned in the response can be used as input
+        parameter in `GET /payment/status/{paymentId}`.
+      operationId: getSinglePaymentStatus
+      parameters:
+        paymentId: $response.body#/orderId
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+    oAuth2AuthCode:
+      type: oauth2
+      flows:
+        authorizationCodeFlow:
+          authorizationUrl: https://example.com/oauth/authorize
+          tokenUrl: https://example.com/api/oauth.access
+          scopes:
+            read: Read only access
+            write: Read Write access
+            admin: Admin access
+    clientCredentialFlow:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://example.com/api/oauth.access
+          scopes:
+            read: Read only access
+            write: Read Write access
+            admin: Admin access
